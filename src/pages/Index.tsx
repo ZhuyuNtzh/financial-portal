@@ -6,6 +6,7 @@ import Header from '@/components/Header';
 import TransactionForm from '@/components/TransactionForm';
 import TransactionList from '@/components/TransactionList';
 import AnalyticsView from '@/components/AnalyticsView';
+import { useAuth } from '@/hooks/useAuth';
 import { 
   getTransactions, 
   saveTransactions, 
@@ -15,6 +16,7 @@ import {
 } from '@/utils/transactionUtils';
 
 const Index = () => {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('transactions');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -23,18 +25,20 @@ const Index = () => {
 
   // Load transactions and categories from localStorage
   useEffect(() => {
-    const loadedTransactions = getTransactions();
-    const loadedCategories = getCategories();
+    if (!user) return;
+    
+    const loadedTransactions = getTransactions(user.id);
+    const loadedCategories = getCategories(user.id);
     
     setTransactions(loadedTransactions);
     setCategories(loadedCategories);
     
     // Initialize categories if none exist
     if (loadedCategories.length === 0) {
-      saveCategories(defaultCategories);
+      saveCategories(defaultCategories, user.id);
       setCategories(defaultCategories);
     }
-  }, []);
+  }, [user]);
 
   // Handle tab change
   const handleTabChange = (value: string) => {
@@ -55,6 +59,8 @@ const Index = () => {
 
   // Save transaction (new or edited)
   const handleSaveTransaction = (transaction: Transaction) => {
+    if (!user) return;
+    
     const isEdit = transactions.some(t => t.id === transaction.id);
     let updatedTransactions: Transaction[];
     
@@ -69,14 +75,16 @@ const Index = () => {
     }
     
     setTransactions(updatedTransactions);
-    saveTransactions(updatedTransactions);
+    saveTransactions(updatedTransactions, user.id);
   };
 
   // Delete transaction
   const handleDeleteTransaction = (transactionId: string) => {
+    if (!user) return;
+    
     const updatedTransactions = transactions.filter(t => t.id !== transactionId);
     setTransactions(updatedTransactions);
-    saveTransactions(updatedTransactions);
+    saveTransactions(updatedTransactions, user.id);
     toast.success('交易已删除');
   };
 

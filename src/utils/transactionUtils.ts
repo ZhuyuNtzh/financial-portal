@@ -1,66 +1,125 @@
 
-import { 
-  Category, 
-  Transaction, 
-  TransactionSummary, 
-  FilterOptions,
-  TransactionType
-} from '@/types';
+import { v4 as uuidv4 } from 'uuid';
+import { Transaction, Category, FilterOptions, TransactionSummary, DateRange } from '@/types';
 
-// Initial categories
-export const defaultCategories: Category[] = [
-  { id: 'salary', name: '工资', type: 'income' },
-  { id: 'bonus', name: '奖金', type: 'income' },
-  { id: 'investment', name: '投资收益', type: 'income' },
-  { id: 'gift', name: '礼金', type: 'income' },
-  { id: 'other-income', name: '其他收入', type: 'income' },
-  
-  { id: 'food', name: '餐饮', type: 'expense' },
-  { id: 'shopping', name: '购物', type: 'expense' },
-  { id: 'housing', name: '住房', type: 'expense' },
-  { id: 'transportation', name: '交通', type: 'expense' },
-  { id: 'entertainment', name: '娱乐', type: 'expense' },
-  { id: 'medical', name: '医疗', type: 'expense' },
-  { id: 'education', name: '教育', type: 'expense' },
-  { id: 'utilities', name: '水电', type: 'expense' },
-  { id: 'other-expense', name: '其他支出', type: 'expense' },
-];
+// Get user-specific storage key
+const getUserKey = (userId: string, key: string) => `${key}_${userId}`;
 
-// Store transactions in localStorage
-export const saveTransactions = (transactions: Transaction[]): void => {
-  localStorage.setItem('transactions', JSON.stringify(transactions));
+// Load transactions from localStorage
+export const getTransactions = (userId: string): Transaction[] => {
+  const storageKey = getUserKey(userId, 'transactions');
+  const transactions = localStorage.getItem(storageKey);
+  return transactions ? JSON.parse(transactions) : [];
 };
 
-// Get transactions from localStorage
-export const getTransactions = (): Transaction[] => {
-  const stored = localStorage.getItem('transactions');
-  if (!stored) return [];
-  try {
-    return JSON.parse(stored);
-  } catch (e) {
-    console.error('Failed to parse transactions:', e);
-    return [];
-  }
+// Save transactions to localStorage
+export const saveTransactions = (transactions: Transaction[], userId: string): void => {
+  const storageKey = getUserKey(userId, 'transactions');
+  localStorage.setItem(storageKey, JSON.stringify(transactions));
 };
 
-// Get categories from localStorage or use defaults
-export const getCategories = (): Category[] => {
-  const stored = localStorage.getItem('categories');
-  if (!stored) return defaultCategories;
-  try {
-    return JSON.parse(stored);
-  } catch (e) {
-    console.error('Failed to parse categories:', e);
-    return defaultCategories;
-  }
+// Load categories from localStorage
+export const getCategories = (userId: string): Category[] => {
+  const storageKey = getUserKey(userId, 'categories');
+  const categories = localStorage.getItem(storageKey);
+  return categories ? JSON.parse(categories) : [];
 };
 
 // Save categories to localStorage
-export const saveCategories = (categories: Category[]): void => {
-  localStorage.setItem('categories', JSON.stringify(categories));
+export const saveCategories = (categories: Category[], userId: string): void => {
+  const storageKey = getUserKey(userId, 'categories');
+  localStorage.setItem(storageKey, JSON.stringify(categories));
 };
 
-// Format amount as currency
+// Default categories for new users
+export const defaultCategories: Category[] = [
+  { id: uuidv4(), name: '工资', type: 'income', icon: '💰' },
+  { id: uuidv4(), name: '奖金', type: 'income', icon: '🎁' },
+  { id: uuidv4(), name: '投资', type: 'income', icon: '📈' },
+  { id: uuidv4(), name: '其他收入', type: 'income', icon: '💸' },
+  { id: uuidv4(), name: '餐饮', type: 'expense', icon: '🍔' },
+  { id: uuidv4(), name: '购物', type: 'expense', icon: '🛒' },
+  { id: uuidv4(), name: '交通', type: 'expense', icon: '🚗' },
+  { id: uuidv4(), name: '住房', type: 'expense', icon: '🏠' },
+  { id: uuidv4(), name: '娱乐', type: 'expense', icon: '🎬' },
+  { id: uuidv4(), name: '医疗', type: 'expense', icon: '💊' },
+  { id: uuidv4(), name: '教育', type: 'expense', icon: '📚' },
+  { id: uuidv4(), name: '其他支出', type: 'expense', icon: '📝' },
+];
+
+// Filter transactions based on filter options
+export const filterTransactions = (
+  transactions: Transaction[], 
+  filterOptions: FilterOptions
+): Transaction[] => {
+  return transactions.filter(transaction => {
+    const transactionDate = new Date(transaction.date);
+    const { dateRange, types, categoryIds } = filterOptions;
+    
+    // Filter by date range
+    if (dateRange.from && transactionDate < dateRange.from) return false;
+    if (dateRange.to) {
+      const endOfDay = new Date(dateRange.to);
+      endOfDay.setHours(23, 59, 59, 999);
+      if (transactionDate > endOfDay) return false;
+    }
+    
+    // Filter by transaction type
+    if (types.length > 0 && !types.includes(transaction.type)) return false;
+    
+    // Filter by category
+    if (categoryIds.length > 0 && !categoryIds.includes(transaction.categoryId)) return false;
+    
+    return true;
+  });
+};
+
+// Calculate transaction summary
+export const calculateTransactionSummary = (
+  transactions: Transaction[],
+  categories: Category[]
+): TransactionSummary => {
+  const summary: TransactionSummary = {
+    totalIncome: 0,
+    totalExpense: 0,
+    netAmount: 0,
+    categorySummary: []
+  };
+  
+  // Initialize category summary with zero amounts
+  const categoryMap = new Map<string, number>();
+  
+  // Calculate totals
+  transactions.forEach(transaction => {
+    if (transaction.type === 'income') {
+      summary.totalIncome += transaction.amount;
+    } else {
+      summary.totalExpense += transaction.amount;
+    }
+    
+    // Update category amount
+    const currentAmount = categoryMap.get(transaction.categoryId) || 0;
+    categoryMap.set(transaction.categoryId, currentAmount + transaction.amount);
+  });
+  
+  // Set net amount
+  summary.netAmount = summary.totalIncome - summary.totalExpense;
+  
+  // Convert category map to array
+  summary.categorySummary = Array.from(categoryMap.entries()).map(([categoryId, amount]) => ({
+    categoryId,
+    amount
+  }));
+  
+  return summary;
+};
+
+// Get transaction type color
+export const getTransactionTypeColor = (type: 'income' | 'expense'): string => {
+  return type === 'income' ? 'text-green-500' : 'text-red-500';
+};
+
+// Format currency
 export const formatCurrency = (amount: number): string => {
   return new Intl.NumberFormat('zh-CN', {
     style: 'currency',
@@ -69,105 +128,14 @@ export const formatCurrency = (amount: number): string => {
   }).format(amount);
 };
 
-// Filter transactions by options
-export const filterTransactions = (
-  transactions: Transaction[],
-  options: FilterOptions
-): Transaction[] => {
-  return transactions.filter(transaction => {
-    // Filter by date range
-    if (options.dateRange.from || options.dateRange.to) {
-      const transactionDate = new Date(transaction.date);
-      
-      if (options.dateRange.from && transactionDate < options.dateRange.from) {
-        return false;
-      }
-      
-      if (options.dateRange.to) {
-        const endDate = new Date(options.dateRange.to);
-        endDate.setHours(23, 59, 59, 999); // End of day
-        if (transactionDate > endDate) {
-          return false;
-        }
-      }
-    }
-    
-    // Filter by transaction type
-    if (options.types.length > 0 && !options.types.includes(transaction.type)) {
-      return false;
-    }
-    
-    // Filter by category
-    if (options.categoryIds.length > 0 && !options.categoryIds.includes(transaction.categoryId)) {
-      return false;
-    }
-    
-    return true;
-  });
-};
-
-// Generate summary for transactions
-export const generateSummary = (transactions: Transaction[], categories: Category[]): TransactionSummary => {
-  let totalIncome = 0;
-  let totalExpense = 0;
-  const categorySummary: { categoryId: string; amount: number }[] = [];
-  
-  // Initialize all categories with zero amount
-  categories.forEach(category => {
-    categorySummary.push({
-      categoryId: category.id,
-      amount: 0
-    });
-  });
-  
-  // Sum up transactions
-  transactions.forEach(transaction => {
-    if (transaction.type === 'income') {
-      totalIncome += transaction.amount;
-    } else {
-      totalExpense += transaction.amount;
-    }
-    
-    // Add to category summary
-    const categoryIndex = categorySummary.findIndex(c => c.categoryId === transaction.categoryId);
-    if (categoryIndex !== -1) {
-      categorySummary[categoryIndex].amount += transaction.amount;
-    }
-  });
-  
-  return {
-    totalIncome,
-    totalExpense,
-    netAmount: totalIncome - totalExpense,
-    categorySummary
-  };
-};
-
 // Generate a new transaction ID
-export const generateId = (): string => {
-  return Date.now().toString(36) + Math.random().toString(36).substring(2);
+export const generateTransactionId = (): string => {
+  return uuidv4();
 };
 
-// Get transactions by type
-export const getTransactionsByType = (
-  transactions: Transaction[],
-  type: TransactionType
-): Transaction[] => {
-  return transactions.filter(transaction => transaction.type === type);
-};
-
-// Get category by ID
-export const getCategoryById = (
-  categories: Category[],
-  categoryId: string
-): Category | undefined => {
-  return categories.find(category => category.id === categoryId);
-};
-
-// Get transactions by category
-export const getTransactionsByCategory = (
-  transactions: Transaction[],
-  categoryId: string
-): Transaction[] => {
-  return transactions.filter(transaction => transaction.categoryId === categoryId);
+// Sort transactions by date (newest first)
+export const sortTransactionsByDate = (transactions: Transaction[]): Transaction[] => {
+  return [...transactions].sort((a, b) => {
+    return new Date(b.date).getTime() - new Date(a.date).getTime();
+  });
 };

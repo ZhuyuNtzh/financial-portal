@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { PlusCircle, BarChart3, List } from 'lucide-react';
+import { PlusCircle, BarChart3, List, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Tabs,
@@ -8,6 +8,8 @@ import {
   TabsTrigger,
 } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
 
 interface HeaderProps {
   activeTab: string;
@@ -20,10 +22,24 @@ const Header: React.FC<HeaderProps> = ({
   onTabChange,
   onNewTransaction
 }) => {
+  const { user, logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    toast.success('已成功退出登录');
+  };
+
   return (
     <header className="sticky top-0 z-10 w-full px-6 py-4 glass-panel animate-fade-in">
       <div className="container flex items-center justify-between max-w-screen-xl mx-auto">
-        <h1 className="text-xl font-medium">财务记账</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-xl font-medium">财务记账</h1>
+          {user && (
+            <span className="text-sm text-muted-foreground hidden sm:inline-block">
+              ({user.email})
+            </span>
+          )}
+        </div>
         <div className="flex items-center space-x-2">
           <Tabs value={activeTab} onValueChange={onTabChange} className="hidden sm:block">
             <TabsList className="grid w-60 grid-cols-2">
@@ -46,6 +62,14 @@ const Header: React.FC<HeaderProps> = ({
           >
             <PlusCircle className="w-4 h-4 mr-2" />
             <span>新增交易</span>
+          </Button>
+          <Button 
+            variant="outline" 
+            size="icon" 
+            onClick={handleLogout} 
+            title="退出登录"
+          >
+            <LogOut className="h-4 w-4" />
           </Button>
         </div>
       </div>
