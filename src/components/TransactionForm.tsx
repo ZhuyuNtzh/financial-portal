@@ -37,7 +37,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, Clock } from 'lucide-react';
 import { generateId } from '@/utils/transactionUtils';
 
 interface TransactionFormProps {
@@ -51,6 +51,7 @@ interface TransactionFormProps {
 const formSchema = z.object({
   amount: z.coerce.number().positive('金额必须大于零'),
   date: z.date(),
+  time: z.string(),
   type: z.enum(['income', 'expense']),
   categoryId: z.string().min(1, { message: '请选择类别' }),
   notes: z.string().optional(),
@@ -68,6 +69,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
     defaultValues: {
       amount: 0,
       date: new Date(),
+      time: format(new Date(), 'HH:mm'),
       type: 'expense' as TransactionType,
       categoryId: '',
       notes: '',
@@ -77,9 +79,11 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
   // Set form values when editing a transaction
   useEffect(() => {
     if (editTransaction) {
+      const transactionDate = new Date(editTransaction.date);
       form.reset({
         amount: editTransaction.amount,
-        date: new Date(editTransaction.date),
+        date: transactionDate,
+        time: format(transactionDate, 'HH:mm'),
         type: editTransaction.type,
         categoryId: editTransaction.categoryId,
         notes: editTransaction.notes,
@@ -88,6 +92,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
       form.reset({
         amount: 0,
         date: new Date(),
+        time: format(new Date(), 'HH:mm'),
         type: 'expense',
         categoryId: '',
         notes: '',
@@ -101,10 +106,15 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
   );
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
+    // Combine date and time
+    const dateTime = new Date(values.date);
+    const [hours, minutes] = values.time.split(':').map(Number);
+    dateTime.setHours(hours, minutes);
+
     const transaction: Transaction = {
       id: editTransaction?.id || generateId(),
       amount: values.amount,
-      date: values.date.toISOString(),
+      date: dateTime.toISOString(),
       type: values.type,
       categoryId: values.categoryId,
       notes: values.notes || '',
@@ -172,45 +182,68 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="date"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>日期</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-full pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value ? (
-                            format(field.value, "yyyy-MM-dd")
-                          ) : (
-                            <span>选择日期</span>
-                          )}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        initialFocus
-                        className={cn("p-3 pointer-events-auto")}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="date"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>日期</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, "yyyy-MM-dd")
+                            ) : (
+                              <span>选择日期</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          initialFocus
+                          className={cn("p-3 pointer-events-auto")}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="time"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>时间</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Input
+                          type="time"
+                          {...field}
+                          className="pl-8"
+                        />
+                        <Clock className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <FormField
               control={form.control}
@@ -224,11 +257,17 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
                         <SelectValue placeholder="选择类别" />
                       </SelectTrigger>
                       <SelectContent>
-                        {filteredCategories.map((category) => (
-                          <SelectItem key={category.id} value={category.id}>
-                            {category.name}
+                        {filteredCategories.length > 0 ? (
+                          filteredCategories.map((category) => (
+                            <SelectItem key={category.id} value={category.id}>
+                              {category.icon} {category.name}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="" disabled>
+                            没有可用的类别
                           </SelectItem>
-                        ))}
+                        )}
                       </SelectContent>
                     </Select>
                   </FormControl>
