@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
@@ -59,7 +58,6 @@ interface AnalyticsViewProps {
   categories: Category[];
 }
 
-// Colors for the pie chart
 const COLORS = [
   '#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8',
   '#82CA9D', '#A4DE6C', '#D0ED57', '#F56954', '#FFA726'
@@ -86,10 +84,9 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ transactions, categories 
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
-  // Compute date range based on selected time range
   const getDateRangeFromTimeRange = (): DateRange => {
     const today = new Date();
-    const to = new Date(today);
+    let to = new Date(today);
     let from: Date;
 
     switch (timeRange) {
@@ -107,7 +104,6 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ transactions, categories 
         return { from, to };
       case 'thisMonth':
         from = new Date(today.getFullYear(), today.getMonth(), 1);
-        to.setDate(today.getDate());
         return { from, to };
       case 'lastMonth':
         from = new Date(today.getFullYear(), today.getMonth() - 1, 1);
@@ -125,7 +121,6 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ transactions, categories 
     }
   };
 
-  // Get filtered transactions
   const getFilteredTransactions = () => {
     const computedDateRange = timeRange === 'custom' ? dateRange : getDateRangeFromTimeRange();
     
@@ -139,7 +134,6 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ transactions, categories 
   const filteredTransactions = getFilteredTransactions();
   const summary = generateSummary(filteredTransactions, categories);
 
-  // Toggle type selection
   const toggleType = (type: TransactionType) => {
     setSelectedTypes(prev => 
       prev.includes(type) 
@@ -148,7 +142,6 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ transactions, categories 
     );
   };
 
-  // Toggle category selection
   const toggleCategory = (categoryId: string) => {
     setSelectedCategories(prev => 
       prev.includes(categoryId)
@@ -157,7 +150,6 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ transactions, categories 
     );
   };
 
-  // Prepare data for charts
   const prepareBarChartData = () => {
     const dateMap = new Map<string, {
       date: string;
@@ -168,7 +160,6 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ transactions, categories 
     const computedDateRange = timeRange === 'custom' ? dateRange : getDateRangeFromTimeRange();
     if (!computedDateRange.from) return [];
     
-    // Initialize dates in range
     let currentDate = new Date(computedDateRange.from);
     const endDate = computedDateRange.to || new Date();
     
@@ -182,7 +173,6 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ transactions, categories 
       currentDate.setDate(currentDate.getDate() + 1);
     }
     
-    // Fill with transaction data
     filteredTransactions.forEach(transaction => {
       const dateStr = format(new Date(transaction.date), 'yyyy-MM-dd');
       const existing = dateMap.get(dateStr);
@@ -206,7 +196,6 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ transactions, categories 
       categoryId: string;
     }>();
     
-    // Initialize all categories
     categories
       .filter(category => category.type === type)
       .forEach(category => {
@@ -217,7 +206,6 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ transactions, categories 
         });
       });
     
-    // Fill with transaction data
     filteredTransactions
       .filter(transaction => transaction.type === type)
       .forEach(transaction => {
@@ -227,7 +215,6 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ transactions, categories 
         }
       });
     
-    // Return only categories with values
     return Array.from(categoryMap.values())
       .filter(item => item.value > 0)
       .sort((a, b) => b.value - a.value);
