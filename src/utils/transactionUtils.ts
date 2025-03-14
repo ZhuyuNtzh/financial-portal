@@ -128,14 +128,25 @@ export const formatCurrency = (amount: number): string => {
   }).format(amount);
 };
 
-// Generate a new transaction ID
-export const generateTransactionId = (): string => {
+// Generate a new transaction ID - Adding this function
+export const generateId = (): string => {
   return uuidv4();
 };
+
+// Alias for backward compatibility
+export const generateTransactionId = generateId;
 
 // Sort transactions by date (newest first)
 export const sortTransactionsByDate = (transactions: Transaction[]): Transaction[] => {
   return [...transactions].sort((a, b) => {
     return new Date(b.date).getTime() - new Date(a.date).getTime();
   });
+};
+
+// Generate a summary of transactions - Adding this function
+export const generateSummary = (
+  transactions: Transaction[],
+  categories: Category[]
+): TransactionSummary => {
+  return calculateTransactionSummary(transactions, categories);
 };
