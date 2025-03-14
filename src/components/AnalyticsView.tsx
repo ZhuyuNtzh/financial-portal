@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
@@ -86,38 +87,49 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ transactions, categories 
 
   const getDateRangeFromTimeRange = (): DateRange => {
     const today = new Date();
-    let to = new Date(today);
-    let from: Date;
-
+    
     switch (timeRange) {
-      case '7days':
-        from = new Date(today);
+      case '7days': {
+        const from = new Date(today);
         from.setDate(today.getDate() - 7);
+        const to = new Date(today);
         return { from, to };
-      case '30days':
-        from = new Date(today);
+      }
+      case '30days': {
+        const from = new Date(today);
         from.setDate(today.getDate() - 30);
+        const to = new Date(today);
         return { from, to };
-      case '90days':
-        from = new Date(today);
+      }
+      case '90days': {
+        const from = new Date(today);
         from.setDate(today.getDate() - 90);
+        const to = new Date(today);
         return { from, to };
-      case 'thisMonth':
-        from = new Date(today.getFullYear(), today.getMonth(), 1);
+      }
+      case 'thisMonth': {
+        const from = new Date(today.getFullYear(), today.getMonth(), 1);
+        const to = new Date(today);
         return { from, to };
-      case 'lastMonth':
-        from = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-        to = new Date(today.getFullYear(), today.getMonth(), 0);
+      }
+      case 'lastMonth': {
+        const from = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        const to = new Date(today.getFullYear(), today.getMonth(), 0);
         return { from, to };
-      case 'thisYear':
-        from = new Date(today.getFullYear(), 0, 1);
+      }
+      case 'thisYear': {
+        const from = new Date(today.getFullYear(), 0, 1);
+        const to = new Date(today);
         return { from, to };
+      }
       case 'custom':
         return dateRange;
-      default:
-        from = new Date(today);
+      default: {
+        const from = new Date(today);
         from.setDate(today.getDate() - 30);
+        const to = new Date(today);
         return { from, to };
+      }
     }
   };
 
