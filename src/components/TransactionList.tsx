@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
@@ -51,15 +50,6 @@ const TransactionList: React.FC<TransactionListProps> = ({
   });
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
-  // Calculate summary
-  const totalIncome = transactions
-    .filter(t => t.type === 'income')
-    .reduce((sum, t) => sum + t.amount, 0);
-  
-  const totalExpense = transactions
-    .filter(t => t.type === 'expense')
-    .reduce((sum, t) => sum + t.amount, 0);
-
   // Filter transactions
   const filteredTransactions = transactions.filter(transaction => {
     // Search filter
@@ -105,6 +95,15 @@ const TransactionList: React.FC<TransactionListProps> = ({
     
     return true;
   });
+  
+  // Calculate summary ONLY from filtered transactions
+  const totalIncome = filteredTransactions
+    .filter(t => t.type === 'income')
+    .reduce((sum, t) => sum + t.amount, 0);
+  
+  const totalExpense = filteredTransactions
+    .filter(t => t.type === 'expense')
+    .reduce((sum, t) => sum + t.amount, 0);
   
   // Sort transactions
   const sortedTransactions = [...filteredTransactions].sort((a, b) => {
